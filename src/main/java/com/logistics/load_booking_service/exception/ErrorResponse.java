@@ -1,4 +1,5 @@
 package com.logistics.load_booking_service.exception;
+
 import java.time.LocalDateTime;
 
 public class ErrorResponse {
