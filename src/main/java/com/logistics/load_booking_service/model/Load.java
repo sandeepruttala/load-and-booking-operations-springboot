@@ -8,8 +8,7 @@ import org.hibernate.annotations.UuidGenerator;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
-@Setter
-@Getter
+
 @Entity
 @Table(name = "loads")
 @Data
