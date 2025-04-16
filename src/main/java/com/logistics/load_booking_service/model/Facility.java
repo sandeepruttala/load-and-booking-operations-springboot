@@ -16,5 +16,4 @@ public class Facility {
     private String unloadingPoint;
     private LocalDateTime loadingDate;
     private LocalDateTime unloadingDate;
-
 }

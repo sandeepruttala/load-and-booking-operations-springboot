@@ -44,5 +44,4 @@ public class Load {
             status = LoadStatus.POSTED;
         }
     }
-
 }

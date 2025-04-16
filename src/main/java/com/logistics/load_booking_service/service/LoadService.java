@@ -15,8 +15,13 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 @Service
 public class LoadService {
+
+    private static final Logger logger = LoggerFactory.getLogger(LoadService.class);
 
     private final LoadRepository loadRepository;
 
@@ -27,65 +32,77 @@ public class LoadService {
 
     @Transactional
     public LoadDTO createLoad(LoadDTO loadDTO) {
+        logger.info("Entering createLoad with loadDTO: {}", loadDTO);
         Load load = new Load();
-
-        // Copy properties of LoadDTO to Load entity
         BeanUtils.copyProperties(loadDTO, load);
 
-        // Manually map FacilityDTO to Facility (since BeanUtils does not handle nested objects)
         Facility facility = new Facility();
         BeanUtils.copyProperties(loadDTO.getFacility(), facility);
         load.setFacility(facility);
 
-        // Set the default status
         load.setStatus(LoadStatus.POSTED);
 
         Load savedLoad = loadRepository.save(load);
 
-        // Map saved Load entity to LoadDTO
         LoadDTO savedLoadDTO = new LoadDTO();
         BeanUtils.copyProperties(savedLoad, savedLoadDTO);
-
+        logger.info("Exiting createLoad with savedLoadDTO: {}", savedLoadDTO);
         return savedLoadDTO;
     }
 
     public List<LoadDTO> getAllLoads() {
-        return loadRepository.findAll().stream()
+        logger.info("Entering getAllLoads");
+        List<LoadDTO> loads = loadRepository.findAll().stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
+        logger.info("Exiting getAllLoads with {} loads", loads.size());
+        return loads;
     }
 
     public List<LoadDTO> getLoadsByShipperId(String shipperId) {
-        return loadRepository.findByShipperId(shipperId).stream()
+        logger.info("Entering getLoadsByShipperId with shipperId: {}", shipperId);
+        List<LoadDTO> loads = loadRepository.findByShipperId(shipperId).stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
+        logger.info("Exiting getLoadsByShipperId with {} loads", loads.size());
+        return loads;
     }
 
     public List<LoadDTO> getLoadsByTruckType(String truckType) {
-        return loadRepository.findByTruckType(truckType).stream()
+        logger.info("Entering getLoadsByTruckType with truckType: {}", truckType);
+        List<LoadDTO> loads = loadRepository.findByTruckType(truckType).stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
+        logger.info("Exiting getLoadsByTruckType with {} loads", loads.size());
+        return loads;
     }
 
     public LoadDTO getLoadById(UUID loadId) {
+        logger.info("Entering getLoadById with loadId: {}", loadId);
         Load load = loadRepository.findById(loadId)
-                .orElseThrow(() -> new ResourceNotFoundException("Load not found with id: " + loadId));
-        return convertToDTO(load);
+                .orElseThrow(() -> {
+                    logger.error("Load not found with id: {}", loadId);
+                    return new ResourceNotFoundException("Load not found with id: " + loadId);
+                });
+        LoadDTO loadDTO = convertToDTO(load);
+        logger.info("Exiting getLoadById with loadDTO: {}", loadDTO);
+        return loadDTO;
     }
 
     @Transactional
     public LoadDTO updateLoad(UUID loadId, LoadDTO loadDTO) {
+        logger.info("Entering updateLoad with loadId: {}, loadDTO: {}", loadId, loadDTO);
         Load existingLoad = loadRepository.findById(loadId)
-                .orElseThrow(() -> new ResourceNotFoundException("Load not found with id: " + loadId));
+                .orElseThrow(() -> {
+                    logger.error("Load not found with id: {}", loadId);
+                    return new ResourceNotFoundException("Load not found with id: " + loadId);
+                });
 
-        // Don't update id and datePosted
         loadDTO.setId(existingLoad.getId());
         loadDTO.setDatePosted(existingLoad.getDatePosted());
 
-        // Copy properties from loadDTO to existingLoad (except for id and datePosted)
         BeanUtils.copyProperties(loadDTO, existingLoad);
 
-        // Manually update the facility field (since BeanUtils does not handle nested objects)
         if (loadDTO.getFacility() != null) {
             Facility updatedFacility = new Facility();
             BeanUtils.copyProperties(loadDTO.getFacility(), updatedFacility);
@@ -93,24 +110,33 @@ public class LoadService {
         }
 
         Load updatedLoad = loadRepository.save(existingLoad);
-
-        return convertToDTO(updatedLoad);
+        LoadDTO updatedLoadDTO = convertToDTO(updatedLoad);
+        logger.info("Exiting updateLoad with updatedLoadDTO: {}", updatedLoadDTO);
+        return updatedLoadDTO;
     }
 
     @Transactional
     public void deleteLoad(UUID loadId) {
+        logger.info("Entering deleteLoad with loadId: {}", loadId);
         if (!loadRepository.existsById(loadId)) {
+            logger.error("Load not found with id: {}", loadId);
             throw new ResourceNotFoundException("Load not found with id: " + loadId);
         }
         loadRepository.deleteById(loadId);
+        logger.info("Exiting deleteLoad with loadId: {}", loadId);
     }
 
     @Transactional
     public void updateLoadStatus(UUID loadId, LoadStatus status) {
+        logger.info("Entering updateLoadStatus with loadId: {}, status: {}", loadId, status);
         Load load = loadRepository.findById(loadId)
-                .orElseThrow(() -> new ResourceNotFoundException("Load not found with id: " + loadId));
+                .orElseThrow(() -> {
+                    logger.error("Load not found with id: {}", loadId);
+                    return new ResourceNotFoundException("Load not found with id: " + loadId);
+                });
         load.setStatus(status);
         loadRepository.save(load);
+        logger.info("Exiting updateLoadStatus with loadId: {}, status: {}", loadId, status);
     }
 
     private LoadDTO convertToDTO(Load load) {

@@ -18,8 +18,13 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 @Service
 public class BookingService {
+
+    private static final Logger logger = LoggerFactory.getLogger(BookingService.class);
 
     private final BookingRepository bookingRepository;
     private final LoadRepository loadRepository;
@@ -34,66 +39,85 @@ public class BookingService {
 
     @Transactional
     public BookingDTO createBooking(BookingDTO bookingDTO) {
-        // Check if load exists and is not cancelled
+        logger.info("Entering createBooking with bookingDTO: {}", bookingDTO);
         Load load = loadRepository.findById(bookingDTO.getLoadId())
-                .orElseThrow(() -> new ResourceNotFoundException("Load not found with id: " + bookingDTO.getLoadId()));
+                .orElseThrow(() -> {
+                    logger.error("Load not found with id: {}", bookingDTO.getLoadId());
+                    return new ResourceNotFoundException("Load not found with id: " + bookingDTO.getLoadId());
+                });
 
         if (load.getStatus() == LoadStatus.CANCELLED) {
+            logger.error("Cannot book a cancelled load with id: {}", bookingDTO.getLoadId());
             throw new BusinessLogicException("Cannot book a cancelled load");
         }
 
-        // Create booking
         Booking booking = new Booking();
         BeanUtils.copyProperties(bookingDTO, booking);
         booking.setStatus(BookingStatus.PENDING);
         Booking savedBooking = bookingRepository.save(booking);
 
-        // Update load status to BOOKED
         loadService.updateLoadStatus(bookingDTO.getLoadId(), LoadStatus.BOOKED);
 
         BookingDTO savedBookingDTO = new BookingDTO();
         BeanUtils.copyProperties(savedBooking, savedBookingDTO);
+        logger.info("Exiting createBooking with savedBookingDTO: {}", savedBookingDTO);
         return savedBookingDTO;
     }
 
     public List<BookingDTO> getAllBookings() {
-        return bookingRepository.findAll().stream()
+        logger.info("Entering getAllBookings");
+        List<BookingDTO> bookings = bookingRepository.findAll().stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
+        logger.info("Exiting getAllBookings with {} bookings", bookings.size());
+        return bookings;
     }
 
     public List<BookingDTO> getBookingsByTransporterId(String transporterId) {
-        return bookingRepository.findByTransporterId(transporterId).stream()
+        logger.info("Entering getBookingsByTransporterId with transporterId: {}", transporterId);
+        List<BookingDTO> bookings = bookingRepository.findByTransporterId(transporterId).stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
+        logger.info("Exiting getBookingsByTransporterId with {} bookings", bookings.size());
+        return bookings;
     }
 
     public List<BookingDTO> getBookingsByLoadId(UUID loadId) {
-        return bookingRepository.findByLoadId(loadId).stream()
+        logger.info("Entering getBookingsByLoadId with loadId: {}", loadId);
+        List<BookingDTO> bookings = bookingRepository.findByLoadId(loadId).stream()
                 .map(this::convertToDTO)
                 .collect(Collectors.toList());
+        logger.info("Exiting getBookingsByLoadId with {} bookings", bookings.size());
+        return bookings;
     }
 
     public BookingDTO getBookingById(UUID bookingId) {
+        logger.info("Entering getBookingById with bookingId: {}", bookingId);
         Booking booking = bookingRepository.findById(bookingId)
-                .orElseThrow(() -> new ResourceNotFoundException("Booking not found with id: " + bookingId));
-        return convertToDTO(booking);
+                .orElseThrow(() -> {
+                    logger.error("Booking not found with id: {}", bookingId);
+                    return new ResourceNotFoundException("Booking not found with id: " + bookingId);
+                });
+        BookingDTO bookingDTO = convertToDTO(booking);
+        logger.info("Exiting getBookingById with bookingDTO: {}", bookingDTO);
+        return bookingDTO;
     }
 
     @Transactional
     public BookingDTO updateBooking(UUID bookingId, BookingDTO bookingDTO) {
+        logger.info("Entering updateBooking with bookingId: {}, bookingDTO: {}", bookingId, bookingDTO);
         Booking existingBooking = bookingRepository.findById(bookingId)
-                .orElseThrow(() -> new ResourceNotFoundException("Booking not found with id: " + bookingId));
+                .orElseThrow(() -> {
+                    logger.error("Booking not found with id: {}", bookingId);
+                    return new ResourceNotFoundException("Booking not found with id: " + bookingId);
+                });
 
-        // Don't update id, loadId, transporterId, and requestedAt
         bookingDTO.setId(existingBooking.getId());
         bookingDTO.setLoadId(existingBooking.getLoadId());
         bookingDTO.setTransporterId(existingBooking.getTransporterId());
         bookingDTO.setRequestedAt(existingBooking.getRequestedAt());
 
-        // Handle status updates
         if (bookingDTO.getStatus() == BookingStatus.ACCEPTED && existingBooking.getStatus() != BookingStatus.ACCEPTED) {
-            // Update other bookings for this load to REJECTED
             bookingRepository.findByLoadId(existingBooking.getLoadId()).stream()
                     .filter(b -> !b.getId().equals(bookingId))
                     .forEach(b -> {
@@ -104,19 +128,24 @@ public class BookingService {
 
         BeanUtils.copyProperties(bookingDTO, existingBooking);
         Booking updatedBooking = bookingRepository.save(existingBooking);
-
-        return convertToDTO(updatedBooking);
+        BookingDTO updatedBookingDTO = convertToDTO(updatedBooking);
+        logger.info("Exiting updateBooking with updatedBookingDTO: {}", updatedBookingDTO);
+        return updatedBookingDTO;
     }
 
     @Transactional
     public void deleteBooking(UUID bookingId) {
+        logger.info("Entering deleteBooking with bookingId: {}", bookingId);
         Booking booking = bookingRepository.findById(bookingId)
-                .orElseThrow(() -> new ResourceNotFoundException("Booking not found with id: " + bookingId));
+                .orElseThrow(() -> {
+                    logger.error("Booking not found with id: {}", bookingId);
+                    return new ResourceNotFoundException("Booking not found with id: " + bookingId);
+                });
 
-        // Update load status to CANCELLED when booking is deleted
         loadService.updateLoadStatus(booking.getLoadId(), LoadStatus.CANCELLED);
 
         bookingRepository.deleteById(bookingId);
+        logger.info("Exiting deleteBooking with bookingId: {}", bookingId);
     }
 
     private BookingDTO convertToDTO(Booking booking) {
