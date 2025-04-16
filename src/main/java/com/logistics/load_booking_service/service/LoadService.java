@@ -38,6 +38,15 @@ public class LoadService {
 
         Facility facility = new Facility();
         BeanUtils.copyProperties(loadDTO.getFacility(), facility);
+
+        // Validation: unloadingDate must be greater than loadingDate
+        if (facility.getUnloadingDate() != null && facility.getLoadingDate() != null) {
+            if (!facility.getUnloadingDate().isAfter(facility.getLoadingDate())) {
+                throw new com.logistics.load_booking_service.exception.BusinessLogicException(
+                        "Unloading date must be after loading date");
+            }
+        }
+
         load.setFacility(facility);
 
         load.setStatus(LoadStatus.POSTED);
@@ -106,6 +115,15 @@ public class LoadService {
         if (loadDTO.getFacility() != null) {
             Facility updatedFacility = new Facility();
             BeanUtils.copyProperties(loadDTO.getFacility(), updatedFacility);
+
+            // Validation: unloadingDate must be greater than loadingDate
+            if (updatedFacility.getUnloadingDate() != null && updatedFacility.getLoadingDate() != null) {
+                if (!updatedFacility.getUnloadingDate().isAfter(updatedFacility.getLoadingDate())) {
+                    throw new com.logistics.load_booking_service.exception.BusinessLogicException(
+                            "Unloading date must be after loading date");
+                }
+            }
+
             existingLoad.setFacility(updatedFacility);
         }
 
