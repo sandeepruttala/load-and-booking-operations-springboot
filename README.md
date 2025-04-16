@@ -13,7 +13,7 @@ A robust backend system built with Spring Boot and PostgreSQL to efficiently man
 
 ## Tech Stack
 
-- **Framework**: Spring Boot 3.2.x
+- **Framework**: Spring Boot 3.4.4
 - **Database**: PostgreSQL
 - **Build Tool**: Maven
 - **Java Version**: 17
