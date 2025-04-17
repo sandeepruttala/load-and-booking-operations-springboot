@@ -187,7 +187,6 @@ The server will start on port 8080 by default.
 ## Business Rules
 
 1. **Load Status Transitions**:
-
    - Default status for new loads: `POSTED`
    - When a booking is created: `BOOKED`
    - When a booking is deleted: `CANCELLED`
@@ -210,11 +209,8 @@ Example error response:
 ```json
 {
   "status": 400,
-  "message": "Validation failed",
-  "errors": {
-    "facility.loadingPoint": "Loading point is required"
-  },
-  "timestamp": "2025-04-14T17:54:53.206671"
+  "message": "Unloading date must be after loading date",
+  "timestamp": "2025-04-17T09:51:48.252015"
 }
 ```
 
